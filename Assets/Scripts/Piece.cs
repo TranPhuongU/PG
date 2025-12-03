@@ -9,6 +9,17 @@ public enum PieceType
     Four = 4,
     Five = 5,
 }
+
+public enum PieceColor
+{
+    Red,
+    Blue,
+    Green,
+    Yellow,
+    Purple,
+    Orange
+}
+
 public class Piece : MonoBehaviour
 {
     public enum InterpType
@@ -22,38 +33,46 @@ public class Piece : MonoBehaviour
 
     public InterpType interpolation = InterpType.SmootherStep;
 
-    Board board;
-
-    Vector3 mouseDownWorld;
-    float cellThreshold = 1f;
-
     public PieceType type = PieceType.One;
+
+    public PieceColor color = PieceColor.Red; 
 
     public int rootX;
     public int rootY;
 
+    public GameObject framePrefab;
+
     public List<Vector2Int> cells = new List<Vector2Int>();
 
-    bool m_isMoving = false;
+    Coroutine moveCoroutine;
+
 
 
     private void Awake()
     {
         GenerateCells();
-        board = FindObjectOfType<Board>();
     }
-
     void GenerateCells()
     {
         cells.Clear();
 
         int len = (int)type;
+        int half = len / 2;
 
-        for (int i = 0; i < len; i++)
+        if (len % 2 == 1)
         {
-            cells.Add(new Vector2Int(i, 0));
+            // Lẻ 1,3,5 → pivot nằm đúng tâm
+            for (int i = -half; i <= half; i++)
+                cells.Add(new Vector2Int(i, 0));
+        }
+        else
+        {
+            // Chẵn 2,4 → pivot nằm giữa 2 cell
+            for (int i = -half; i <= half - 1; i++)
+                cells.Add(new Vector2Int(i, 0));
         }
     }
+
 
     public List<Vector2Int> GetOccupiedCells()
     {
@@ -72,7 +91,6 @@ public class Piece : MonoBehaviour
         rootX = x;
         rootY = y;
     }
-    Coroutine moveCoroutine;
 
     public void MoveSmooth(int rootX, int rootY, float timeToMove)
     {
@@ -85,15 +103,18 @@ public class Piece : MonoBehaviour
     IEnumerator MoveRoutine(int targetRootX, int targetRootY, float timeToMove)
     {
         Vector3 startPos = transform.position;
+        int len = cells.Count;
+        float offset = (len % 2 == 0) ? -0.5f : 0f;
+
         Vector3 endPos = new Vector3(
-            targetRootX * board.cellSize,
-            targetRootY * board.cellSize,
-            0);
+            targetRootX + offset,
+            targetRootY,
+            0
+        );
+
 
         float elapsed = 0f;
         float t;
-
-        m_isMoving = true;
 
         while (elapsed < timeToMove)
         {
@@ -121,10 +142,11 @@ public class Piece : MonoBehaviour
         }
 
         transform.position = endPos;
-        m_isMoving = false;
-
         moveCoroutine = null;
     }
 
-
+    public void ActiveFrame(bool state)
+    {
+        framePrefab.SetActive(state);
+    }
 }

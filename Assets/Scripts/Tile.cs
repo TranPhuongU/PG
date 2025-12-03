@@ -19,7 +19,7 @@ public class Tile : MonoBehaviour
     {
         if (m_board != null)
         {
-            m_board.OnTileDown(this);
+            m_board.HandlePressTile(this);
         }
     }
 
@@ -27,7 +27,7 @@ public class Tile : MonoBehaviour
     {
         if (m_board != null && Input.GetMouseButton(0))
         {
-            m_board.OnTileDragOver(this);
+            m_board.HandleDragTile(this);
         }
     }
 
@@ -35,7 +35,7 @@ public class Tile : MonoBehaviour
     {
         if (m_board != null)
         {
-            m_board.OnTileUp();
+            m_board.HandleReleaseTile();
         }
     }
 }
