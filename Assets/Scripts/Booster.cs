@@ -11,7 +11,7 @@ public class Booster : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragH
     Image m_image;
     RectTransform m_rectXform;
     Vector3 m_startPosition;
-    [SerializeField] Board m_board;
+    Board m_board;
     Tile m_tileTarget;
 
     public static GameObject ActiveBooster;
@@ -165,33 +165,49 @@ public class Booster : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragH
 
     public void RemoveOneGamePiece()
     {
+        if (GameManager.instance.onePieceBoosterAmount <= 0)
+            return;
+
         if (m_board != null && m_tileTarget != null)
         {
             m_board.RemovePieceAt(m_tileTarget.xIndex, m_tileTarget.yIndex);
+            GameManager.instance.onePieceBoosterAmount--;
+            UIManager.instance.UpdateBoosterTexts();
+
         }
     }
 
 
     public void RemovePieceSameColor()
     {
+        if (GameManager.instance.colorPieceBoosterAmount <= 0)
+            return;
+
         if (m_board != null && m_tileTarget != null)
         {
             Piece p = m_board.grid[m_tileTarget.xIndex, m_tileTarget.yIndex];
             if (p != null)
             {
                 m_board.RemoveAllSameColor(p);
+                GameManager.instance.colorPieceBoosterAmount--;
+                UIManager.instance.UpdateBoosterTexts();
+
             }
         }
     }
 
+    public void ReplacePiece()
+    {
+        if (GameManager.instance.replacePieceBoosterAmount <= 0)
+            return;
 
-    //public void DropColorBomb()
-    //{
-    //    if (m_board != null && m_tileTarget != null)
-    //    {
-    //        m_board.MakeColorBombBooster(m_tileTarget.xIndex, m_tileTarget.yIndex);
-    //    }
-    //}
-
-
+        if (m_board != null && m_tileTarget != null)
+        {
+            Piece p = m_board.grid[m_tileTarget.xIndex, m_tileTarget.yIndex];
+            if (p != null && p.booster == PieceBooster.None)
+            {
+                m_board.ReplacePieceAt(p);
+            }
+        }
+    }
 }

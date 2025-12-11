@@ -98,9 +98,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7150b8600eab1b54db357e47f5fd6d76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  score: 3
   interpolation: 4
   type: 3
   color: 0
+  booster: 4
   rootX: 0
   rootY: 0
   framePrefab: {fileID: 6123912133467025240}

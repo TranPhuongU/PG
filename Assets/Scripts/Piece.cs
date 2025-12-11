@@ -13,11 +13,17 @@ public enum PieceType
 public enum PieceColor
 {
     Red,
-    Blue,
     Green,
-    Yellow,
-    Purple,
-    Orange
+    Orange,
+}
+
+public enum PieceBooster
+{
+    OnePiece,
+    ColorPiece,
+    ReplacePiece,
+    BombPiece,
+    None
 }
 
 public class Piece : MonoBehaviour
@@ -31,11 +37,15 @@ public class Piece : MonoBehaviour
         SmootherStep
     }
 
+    public int score;
+
     public InterpType interpolation = InterpType.SmootherStep;
 
     public PieceType type = PieceType.One;
 
     public PieceColor color = PieceColor.Red; 
+
+    public PieceBooster booster = PieceBooster.None;
 
     public int rootX;
     public int rootY;
@@ -52,7 +62,7 @@ public class Piece : MonoBehaviour
     {
         GenerateCells();
     }
-    void GenerateCells()
+    public void GenerateCells()
     {
         cells.Clear();
 

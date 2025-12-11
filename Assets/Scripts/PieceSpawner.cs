@@ -9,6 +9,8 @@ public class PieceSpawner : MonoBehaviour
 
     public Board board;
     public GameObject[] piecePrefabs;
+    public GameObject[] onePiecePrefabsByColor;     // index theo PieceColor enum
+
     public int spawnHeight = 4;
     public float spawnChance = 0.4f;
 
@@ -22,94 +24,165 @@ public class PieceSpawner : MonoBehaviour
         instance = this;
     }
 
-    void Start()
+    private IEnumerator Start()
     {
+        board = FindFirstObjectByType<Board>();
+        // đợi Board Awake + Start chạy xong
+        yield return null;
+
         FillInitialRows();
-        StartCoroutine(InitialBoardSettleRoutine());
         BuildPreviewFromRow0();
-
-
     }
+
 
     void FillInitialRows()
     {
         for (int y = 0; y < spawnHeight; y++)
         {
-            for (int x = 0; x < board.width; x++)
+            // Mỗi hàng luôn để trống ít nhất 1 ô → không bao giờ full row
+            int emptyX = Random.Range(0, board.width);
+
+            int x = 0;
+            while (x < board.width)
             {
-                if (Random.value > spawnChance)
+                // Bỏ qua ô trống bắt buộc
+                if (x == emptyX)
+                {
+                    x++;
                     continue;
-
-                Piece sample = CreateRandomPiece();
-
-                if (board.CanPlace(sample, x, y))
-                {
-                    board.PlacePieceAt(sample, x, y);
-                }
-                else
-                {
-                    Destroy(sample.gameObject);
                 }
 
+                // Random piece
+                Piece p = CreateRandomPiece();
+
+                // Check horizontal bounds BEFORE CanPlace
+                if (!FitsHorizontal(p, x))
+                {
+                    Destroy(p.gameObject);
+                    x++;
+                    continue;
+                }
+
+                // Check support — piece phải được “đỡ” từ dưới
+                if (!HasSupport(p, x, y))
+                {
+                    Destroy(p.gameObject);
+                    x++;
+                    continue;
+                }
+
+                // Check trùng (collision)
+                if (!board.CanPlace(p, x, y))
+                {
+                    Destroy(p.gameObject);
+                    x++;
+                    continue;
+                }
+
+                // Place
+                board.PlacePieceAt(p, x, y);
+
+                // Nhảy qua chiều dài piece
+                x += p.cells.Count;
             }
         }
     }
 
-    public void SpawnTopBufferRow()
-    {
 
-        for (int x = 0; x < board.width; x++)
+    // Hỗ trợ: chỉ cần 1 cell của piece có support
+    bool HasSupport(Piece p, int rx, int ry)
+    {
+        foreach (var c in p.cells)
         {
-            if (Random.value > spawnChance)
+            int nx = rx + c.x;
+            int ny = ry + c.y;
+
+            // Nếu cell này nằm ngoài grid → bỏ qua (không được tính)
+            if (!board.IsInside(nx, ny))
                 continue;
 
-            Piece sample = CreateRandomPiece();
+            int belowY = ny - 1;
 
-            if (board.CanPlace(sample, x, 0))
+            // Nếu dưới rìa đáy (y < 1) → coi như có support
+            if (belowY < 1)
+                return true;
+
+            // Nếu vị trí dưới trong grid
+            if (board.IsInside(nx, belowY))
             {
-                board.PlacePieceAt(sample, x, 0);
+                // Chỉ cần 1 cell có support
+                if (board.grid[nx, belowY] != null)
+                    return true;
             }
-            else
+        }
+
+        // Không cell nào có support
+        return false;
+    }
+    bool FitsHorizontal(Piece p, int rx)
+    {
+        foreach (var c in p.cells)
+        {
+            int nx = rx + c.x;
+            if (nx < 0 || nx >= board.width)
+                return false;
+        }
+        return true;
+    }
+
+    public void SpawnPieceY0()
+    {
+        // Đảm bảo hàng y=0 không bao giờ full
+        int emptyX = Random.Range(0, board.width);
+
+        int y = 0;
+        int x = 0;
+
+        while (x < board.width)
+        {
+            // Bỏ 1 ô trống bắt buộc
+            if (x == emptyX)
             {
-                Destroy(sample.gameObject);
+                x++;
+                continue;
             }
 
+            // Random piece
+            Piece p = CreateRandomPiece();
+            int len = p.cells.Count;
+
+            // Check horizontal bounds (tránh crash vì pivot âm/dương)
+            if (!FitsHorizontal(p, x))
+            {
+                Destroy(p.gameObject);
+                x++;
+                continue;
+            }
+
+            // Check collision
+            if (!board.CanPlace(p, x, y))
+            {
+                Destroy(p.gameObject);
+                x++;
+                continue;
+            }
+
+            // Place piece
+            board.PlacePieceAt(p, x, y);
+
+            // Skip qua chiều dài piece
+            x += len;
         }
 
         BuildPreviewFromRow0();
-
-
     }
+
 
     Piece CreateRandomPiece()
     {
         int index = Random.Range(0, piecePrefabs.Length);
-        GameObject obj = Instantiate(piecePrefabs[index]);
+        GameObject obj = Instantiate(piecePrefabs[index], board.gameObject.transform);
         return obj.GetComponent<Piece>();
-    }
-
-    // ✨ Cho board rơi & clear ngay khi bắt đầu game
-    IEnumerator InitialBoardSettleRoutine()
-    {
-        board.isResolving = true;
-
-        bool chainContinues = true;
-
-        while (chainContinues)
-        {
-            bool moved = board.ApplyFullGravitySmooth();
-
-            if (moved)
-                yield return new WaitForSeconds(0.12f);
-
-            board.ClearAndCollapseLines();
-
-            chainContinues = moved;
-
-            yield return null;
-        }
-
-        board.isResolving = false;
     }
 
     void ClearPreviewRow()
@@ -147,6 +220,10 @@ public class PieceSpawner : MonoBehaviour
 
             activePreviews.Add(pr);
         }
+    }
+    public GameObject GetOnePiecePrefabByColor(PieceColor color)
+    {
+        return onePiecePrefabsByColor[(int)color];
     }
 
 

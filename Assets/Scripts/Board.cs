@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -23,21 +24,48 @@ public class Board : MonoBehaviour
     private int dragStartX;
     private int dragStartY;
 
+    private const float PIECE_FADE_DURATION = 0.2f; // phải khớp với DestroyPieceRoutine
+
+
+    private bool lastFullLineResult = false;
+
+
+    public static Action<int, Piece> onPieceCleared;
 
     void Start()
     {
+        if (grid == null)
+            return; // đợi InitBoard
+
         activeFrame = Instantiate(frameSquarePrefab, transform);
         activeFrame.SetActive(false);
+    }
+
+    public void InitBoard(int w, int h)
+    {
+        width = w;
+        height = h;
 
         grid = new Piece[width, height];
+
+        BuildTiles();
+
+        // GỌI BACKGROUND SCALER
+        for (int i = 0; i < GameManager.instance.boardBGScalers.Length; i++)
+        {
+            GameManager.instance.boardBGScalers[i].FitBoard(width);
+        }
+    }
+
+    void BuildTiles()
+    {
         tiles = new Tile[width, height];
 
-        // tạo tile lưới click
-        for (int y = 0; y < height; y++)
+        for (int y = 1; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                Vector3 pos = new Vector3(x , y , 0);
+                Vector3 pos = new Vector3(x, y, 0);
                 GameObject tObj = Instantiate(tilePrefab, pos, Quaternion.identity);
                 tObj.transform.SetParent(transform);
 
@@ -47,14 +75,13 @@ public class Board : MonoBehaviour
                 tiles[x, y] = t;
             }
         }
-
-        // grid Piece vẫn dùng như code hiện tại
     }
 
     public bool IsInside(int x, int y)
     {
         return x >= 0 && x < width && y >= 0 && y < height;
     }
+
     public bool CanPlace(Piece p, int rx, int ry)
     {
         foreach (var c in p.cells)
@@ -67,6 +94,7 @@ public class Board : MonoBehaviour
         }
         return true;
     }
+
     public bool PlacePieceAt(Piece piece, int x, int ry)
     {
         if (!CanPlace(piece, x, ry))
@@ -91,13 +119,17 @@ public class Board : MonoBehaviour
 
         return true;
     }
-    public void RemovePieceFromGrid(Piece p)
+
+    public void RemovePieceFromGrid(Piece piece)
     {
         for (int x = 0; x < width; x++)
             for (int y = 0; y < height; y++)
-                if (grid[x, y] == p)
+                if (grid[x, y] == piece)
+                {
                     grid[x, y] = null;
+                }
     }
+
     public bool CanPieceMove(Piece p, int dx, int dy)
     {
         foreach (var c in p.cells)
@@ -115,6 +147,7 @@ public class Board : MonoBehaviour
         }
         return true;
     }
+
     public bool MovePieceBy(Piece p, int dx, int dy)
     {
         if (!CanPieceMove(p, dx, dy))
@@ -132,6 +165,7 @@ public class Board : MonoBehaviour
 
         return true;
     }
+
     public bool CanPieceFall(Piece p)
     {
         foreach (var c in p.cells)
@@ -149,7 +183,9 @@ public class Board : MonoBehaviour
 
         return true;
     }
+
     public bool ApplyOneStepFall(Piece p) => MovePieceBy(p, 0, -1);
+
     public bool ApplyFullGravitySmooth()
     {
         if (isRaising) return false;
@@ -203,18 +239,7 @@ public class Board : MonoBehaviour
 
         return moved;
     }
-    public void ClearAndCollapseLines()
-    {
-        for (int y = 1; y < height; y++)   // không check y = 0 !
-        {
-            if (IsLineFull(y))
-            {
-                ClearLine(y);
-                DropAbove(y);
-                y--;
-            }
-        }
-    }
+
     bool IsLineFull(int y)
     {
         for (int x = 0; x < width; x++)
@@ -222,23 +247,36 @@ public class Board : MonoBehaviour
                 return false;
         return true;
     }
-    void ClearLine(int y)
+
+    IEnumerator ClearLineCoroutine(int y)
     {
         HashSet<Piece> pieces = new HashSet<Piece>();
 
+        // gom tất cả piece ở hàng y
         for (int x = 0; x < width; x++)
+        {
             if (grid[x, y] != null)
                 pieces.Add(grid[x, y]);
-
-        foreach (Piece p in pieces)
-        {
-            RemovePieceFromGrid(p);
-            Destroy(p.gameObject);
         }
 
+        // xóa logic trong grid trước, để hàng này coi như trống
         for (int x = 0; x < width; x++)
+        {
             grid[x, y] = null;
+        }
+
+        // gọi DestroyPiece → nó sẽ tự fade & Destroy
+        foreach (Piece p in pieces)
+        {
+            DestroyPiece(p);
+        }
+
+        // ĐỢI cho fade xong (thời gian phải khớp với DestroyPieceRoutine)
+        float fadeDuration = 0.2f;
+        yield return new WaitForSeconds(fadeDuration);
     }
+
+
     void DropAbove(int clearedY)
     {
         for (int y = clearedY + 1; y < height; y++)  // không đụng y = 0
@@ -252,15 +290,16 @@ public class Board : MonoBehaviour
             }
         }
     }
+
     public IEnumerator ResolveAfterMove()
     {
         isResolving = true;
 
+        bool changed;
+
         // ============================
         // PHA 1: GIẢI QUYẾT COMBO TRƯỚC KHI DÂNG
         // ============================
-        bool changed;
-
         do
         {
             // 1. Cho tất cả rơi xuống hết mức có thể
@@ -272,8 +311,8 @@ public class Board : MonoBehaviour
             // 2. Clear line + DropAbove
             changed = false;
 
-            changed = HandleFullLine(changed);
-
+            yield return StartCoroutine(HandleFullLineCoroutine());
+            changed = lastFullLineResult;
             if (changed)
             {
                 // cho player thấy hiệu ứng clear + rơi
@@ -294,7 +333,7 @@ public class Board : MonoBehaviour
         }
 
         // Spawn hàng buffer y = 0
-        PieceSpawner.instance.SpawnTopBufferRow();
+        PieceSpawner.instance.SpawnPieceY0();
 
         do
         {
@@ -305,8 +344,8 @@ public class Board : MonoBehaviour
             }
 
             changed = false;
-            changed = HandleFullLine(changed);
-
+            yield return StartCoroutine(HandleFullLineCoroutine());
+            changed = lastFullLineResult;
             if (changed)
             {
                 yield return new WaitForSeconds(0.1f);
@@ -314,30 +353,57 @@ public class Board : MonoBehaviour
 
         } while (changed);
 
+        if (CheckGameOver())
+        {
+            GameManager.instance.SaveProgress();
+            if (GameManager.instance.IsGameOver())
+            {
+                Debug.Log("Win");
+                GameManager.instance.SetGameState(GameManager.GameState.Win);
+            }
+            else
+            {
+                Debug.Log("Lose");
+
+                GameManager.instance.SetGameState(GameManager.GameState.Lose);
+            }
+            yield break;
+        }
+
         isResolving = false;
     }
-    private bool HandleFullLine(bool changed)
+
+    IEnumerator HandleFullLineCoroutine()
     {
+        bool changed = false;
+
         for (int y = 1; y < height; y++)
         {
             if (IsLineFull(y))
             {
-                ClearLine(y);
+                // 1) Fade & xoá line
+                yield return StartCoroutine(ClearLineCoroutine(y));
+
+                // 2) Sau khi fade xong mới cho rơi
                 DropAbove(y);
+
+                // 3) Kiểm tra lại cùng hàng (vì các hàng trên đã rơi xuống)
                 y--;
+
                 changed = true;
             }
         }
 
-        return changed;
+        lastFullLineResult = changed;
     }
+
+
     public void HandlePressTile(Tile tile)
     {
         if (isResolving) return;
 
         draggingPiece = grid[tile.xIndex, tile.yIndex];
         lastTileOver = tile;
-
 
         if (draggingPiece != null)
         {
@@ -347,8 +413,8 @@ public class Board : MonoBehaviour
             ShowPieceFrame(draggingPiece);
             draggingPiece.ActiveFrame(true);
         }
-
     }
+
     void ShowPieceFrame(Piece p)
     {
         // Position (root cell)
@@ -360,6 +426,7 @@ public class Board : MonoBehaviour
 
         activeFrame.SetActive(true);
     }
+
     public void HandleDragTile(Tile tile)
     {
         if (isResolving) return;
@@ -384,6 +451,7 @@ public class Board : MonoBehaviour
             }
         }
     }
+
     public void HandleReleaseTile()
     {
         if (isResolving) { draggingPiece = null; return; }
@@ -405,12 +473,12 @@ public class Board : MonoBehaviour
         // Nếu có di chuyển → tính lượt
         StartCoroutine(ResolveAfterMove());
 
-
         activeFrame.SetActive(false);
         draggingPiece.ActiveFrame(false);
 
         draggingPiece = null;
     }
+
     public IEnumerator RaiseBoardSmooth()
     {
         isRaising = true;
@@ -458,19 +526,42 @@ public class Board : MonoBehaviour
         Piece p = grid[x, y];
         if (p == null) return;
 
-        RemovePieceFromGrid(p);
-        Destroy(p.gameObject);
-
-        StartCoroutine(ResolveAfterBooster());
+        StartCoroutine(RemoveSinglePieceRoutine(p));
     }
+
+    private IEnumerator RemoveSinglePieceRoutine(Piece p)
+    {
+        // Xóa logic + bắt đầu fade
+        DestroyPiece(p);
+
+        // Đợi fade xong (thời gian phải khớp với DestroyPieceRoutine)
+        yield return new WaitForSeconds(PIECE_FADE_DURATION);
+
+        // Sau đó mới cho board xử lý rơi / clear / raise
+        if (!IsBoardEmpty())
+        {
+            yield return StartCoroutine(ResolveAfterBooster());
+        }
+        else
+        {
+            yield return StartCoroutine(ResolveAfterMove());
+        }
+    }
+
+
     public void RemoveAllSameColor(Piece target)
     {
         if (target == null) return;
 
+        StartCoroutine(RemoveAllSameColorRoutine(target));
+    }
+
+    private IEnumerator RemoveAllSameColorRoutine(Piece target)
+    {
         List<Piece> toRemove = new List<Piece>();
 
         // Tìm tất cả piece cùng màu
-        for (int y = 0; y < height; y++)
+        for (int y = 1; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
@@ -483,16 +574,71 @@ public class Board : MonoBehaviour
             }
         }
 
-        // Xóa ngay lập tức
+        // Gọi DestroyPiece cho từng cái → nó tự fade + xoá logic
         foreach (Piece p in toRemove)
         {
-            RemovePieceFromGrid(p);
-            Destroy(p.gameObject);
+            DestroyPiece(p);
         }
 
-        // Booster KHÔNG tính lượt → dùng coroutine riêng
-        StartCoroutine(ResolveAfterBooster());
+        // Đợi tất cả fade xong
+        yield return new WaitForSeconds(PIECE_FADE_DURATION);
+
+        // Rồi mới resolve board
+        if (!IsBoardEmpty())
+        {
+            yield return StartCoroutine(ResolveAfterBooster());
+        }
+        else
+        {
+            yield return StartCoroutine(ResolveAfterMove());
+        }
     }
+
+
+
+    public void ReplacePieceAt(Piece piece)
+    {
+        if (piece == null || piece.type == PieceType.One) return;
+
+        // 1) Lấy tất cả cell mà piece đang chiếm
+        List<Vector2Int> cells = piece.GetOccupiedCells();
+        PieceColor color = piece.color;
+
+        // 2) Xóa piece cũ
+        RemovePieceFromGrid(piece);
+        Destroy(piece.gameObject);
+
+        // 3) Spawn piece One vào từng cell
+        foreach (var cell in cells)
+        {
+            SpawnOneAt(cell.x, cell.y, color);
+        }
+
+        // 4) Cho hệ thống xử lý rơi + clear
+        StartCoroutine(ResolveAfterBooster());
+
+        GameManager.instance.replacePieceBoosterAmount--;
+        UIManager.instance.UpdateBoosterTexts();
+    }
+
+    private void SpawnOneAt(int x, int y, PieceColor color)
+    {
+        GameObject prefab = PieceSpawner.instance.GetOnePiecePrefabByColor(color);
+
+        GameObject obj = Instantiate(prefab);
+        Piece p = obj.GetComponent<Piece>();
+
+        p.type = PieceType.One;
+        p.color = color;
+        p.GenerateCells();
+
+        p.rootX = x;
+        p.rootY = y;
+        p.transform.position = new Vector3(x, y, 0);
+
+        grid[x, y] = p;
+    }
+
     public IEnumerator ResolveAfterBooster()
     {
         isResolving = true;
@@ -509,8 +655,8 @@ public class Board : MonoBehaviour
 
             changed = false;
 
-            changed = HandleFullLine(changed);
-
+            yield return StartCoroutine(HandleFullLineCoroutine());
+            changed = lastFullLineResult;
             if (changed)
                 yield return new WaitForSeconds(0.1f);
 
@@ -523,6 +669,82 @@ public class Board : MonoBehaviour
         isResolving = false;
     }
 
+    public bool IsBoardEmpty()
+    {
+        for (int y = 1; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (grid[x, y] != null)
+                    return false;
+            }
+        }
+        return true;
+    }
 
+    public bool CheckGameOver()
+    {
+        int dangerRow = 11;
+
+        for (int x = 0; x < width; x++)
+        {
+            if (grid[x, dangerRow] != null)
+                return true;
+        }
+
+        return false;
+    }
+
+    public void DestroyPiece(Piece piece)
+    {
+        if (piece == null) return;
+
+        // 1) Xóa khỏi grid NGAY LẬP TỨC (logic)
+        RemovePieceFromGrid(piece);
+
+        // 2) Gọi sự kiện cộng điểm ngay lúc logic xoá
+        onPieceCleared?.Invoke(piece.score, piece);
+
+        // 3) Chạy hiệu ứng rồi mới Destroy GameObject
+        StartCoroutine(DestroyPieceRoutine(piece));
+    }
+
+    private IEnumerator DestroyPieceRoutine(Piece piece)
+    {
+        if (piece == null)
+            yield break;
+
+        SpriteRenderer sr = piece.GetComponent<SpriteRenderer>();
+        float duration = 0.2f; // thời gian fade
+
+        if (sr != null)
+        {
+            Color startColor = sr.color;
+            float startScale = piece.transform.localScale.x; // giả sử scale đồng đều
+            float t = 0f;
+
+            while (t < 1f)
+            {
+                t += Time.deltaTime / duration;
+
+                // Fade alpha
+                Color c = startColor;
+                c.a = Mathf.Lerp(1f, 0f, t);
+                sr.color = c;
+
+                // Thu nhỏ dần (tuỳ thích, có thể bỏ)
+                float s = Mathf.Lerp(startScale, 0.5f * startScale, t);
+                piece.transform.localScale = new Vector3(s, s, s);
+
+                yield return null;
+            }
+        }
+
+        // Đảm bảo object vẫn chưa bị Destroy ở đâu khác
+        if (piece != null)
+        {
+            Destroy(piece.gameObject);
+        }
+    }
 
 }
