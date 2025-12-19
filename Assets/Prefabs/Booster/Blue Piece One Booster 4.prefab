@@ -191,6 +191,7 @@ MonoBehaviour:
   rootX: 0
   rootY: 0
   framePrefab: {fileID: 6482711221800987354}
+  clearSound: {fileID: 8300000, guid: 6dce900c6b57748dbb2ee112588b2bd9, type: 3}
   cells: []
 --- !u!1 &8509543949567779564
 GameObject:
@@ -219,7 +220,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.9, y: 0.9, z: 0.9}
+  m_LocalScale: {x: 0.67, y: 0.67, z: 0.67}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 8807405130627789807}
@@ -265,7 +266,7 @@ SpriteRenderer:
   m_SortingLayerID: 1443864307
   m_SortingLayer: 1
   m_SortingOrder: 3
-  m_Sprite: {fileID: 21300000, guid: ef2fe04ca55997a47971e62d03931953, type: 3}
+  m_Sprite: {fileID: 21300000, guid: c0ee38148e4091a43bbd7d2cf3f8bc75, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0

@@ -11,8 +11,8 @@ public class RectXformMover : MonoBehaviour
     public float timeToMove = 1f;
 
     RectTransform m_rectXform;
-    bool m_isMoving = false;
 
+    Coroutine currentRoutine;
 
     void Awake()
     {
@@ -20,13 +20,17 @@ public class RectXformMover : MonoBehaviour
     }
 
 
+
     void Move(Vector3 startPos, Vector3 endPos, float timeToMove)
     {
-        if (!m_isMoving)
+        if (currentRoutine != null)
         {
-            StartCoroutine(MoveRoutine(startPos, endPos, timeToMove));
+            StopCoroutine(currentRoutine);
         }
+
+        currentRoutine = StartCoroutine(MoveRoutine(startPos, endPos, timeToMove));
     }
+
 
     IEnumerator MoveRoutine(Vector3 startPos, Vector3 endPos, float timeToMove)
     {
@@ -38,7 +42,6 @@ public class RectXformMover : MonoBehaviour
 
         bool reachedDestination = false;
         float elapsedTime = 0f;
-        m_isMoving = true;
 
         while (!reachedDestination)
         {
@@ -64,7 +67,6 @@ public class RectXformMover : MonoBehaviour
 
         }
 
-        m_isMoving = false;
 
     }
 

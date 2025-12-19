@@ -190,4 +190,5 @@ MonoBehaviour:
   rootX: 0
   rootY: 0
   framePrefab: {fileID: 1052813592282341819}
+  clearSound: {fileID: 8300000, guid: 6dce900c6b57748dbb2ee112588b2bd9, type: 3}
   cells: []

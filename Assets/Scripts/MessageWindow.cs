@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(RectXformMover))]
@@ -19,6 +21,18 @@ public class MessageWindow : MonoBehaviour
 
     public Image goalImage;
     public Text goalText;
+
+    public GameObject goalObject;
+
+    public Action onStartPressed;
+
+    public void OnButtonStartPressed()
+    {
+        onStartPressed?.Invoke();
+    }
+
+  
+
 
     public void ShowMessage(Sprite sprite = null, string message = "", string buttonMsg = "start")
     {
@@ -46,10 +60,14 @@ public class MessageWindow : MonoBehaviour
 
     public void ShowWinMessage()
     {
+        goalObject.SetActive(true);
+
         ShowMessage(winIcon, "level\ncomplete", "ok");
     }
     public void ShowLoseMessage()
     {
+        goalObject.SetActive(true);
+
         ShowMessage(loseIcon, "level\nfailed", "ok");
     }
 
@@ -66,13 +84,11 @@ public class MessageWindow : MonoBehaviour
         }
     }
 
-    public void ShowGoalCaption(string caption = "", int offsetX = 0, int offsetY = 0)
+    public void ShowGoalCaption(string caption = "")
     {
         if (goalText != null)
         {
             goalText.text = caption;
-            RectTransform rectXform = goalText.GetComponent<RectTransform>();
-            rectXform.anchoredPosition += new Vector2(offsetX, offsetY);
         }
     }
 

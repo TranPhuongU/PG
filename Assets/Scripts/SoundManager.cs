@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -7,19 +7,20 @@ public class SoundManager : MonoBehaviour
 {
     public static SoundManager instance;
 
-    public AudioClip[] musicClips;
-    public AudioClip[] winClips;
-    public AudioClip[] loseClips;
-    public AudioClip[] bonusClips;
+    [SerializeField] AudioSource[] musicSource;
 
-    [Range(0, 1)]
-    public float musicVolume = 0.5f;
+    [SerializeField] AudioSource[] winSound;
 
-    [Range(0, 1)]
-    public float fxVolume = 1.0f;
+    [SerializeField] AudioSource[] loseSound;
 
-    public float lowPitch = 0.95f;
-    public float highPitch = 1.05f;
+    [SerializeField] AudioSource[] bonusSound;
+
+    [SerializeField] AudioSource clearPieceSound;
+    [SerializeField] AudioSource starSound;
+
+    [SerializeField] float musicMinDb = -80f;
+    float currentMusicMaxDb = -20f; // sẽ auto cập nhật theo clip
+
 
     private void Awake()
     {
@@ -30,66 +31,41 @@ public class SoundManager : MonoBehaviour
         PlayRandomMusic();
     }
 
-    public AudioSource PlayClipAtPoint(AudioClip clip, Vector3 position, float volume = 1f, bool randomizePitch = true)
+    public void PlayRandomSound(AudioSource[] audioSource)
     {
-        if (clip != null)
-        {
-            GameObject go = new GameObject("SoundFX" + clip.name);
-            go.transform.position = position;
-
-            AudioSource source = go.AddComponent<AudioSource>();
-            source.clip = clip;
-
-            if (randomizePitch)
-            {
-                float randomPitch = Random.Range(lowPitch, highPitch);
-                source.pitch = randomPitch;
-            }
-
-            source.volume = volume;
-
-            source.Play();
-            Destroy(go, clip.length);
-            return source;
-        }
-
-        return null;
+        if(audioSource.Length == 0) return;
+        int index = Random.Range(0, audioSource.Length);
+        audioSource[index].Play();
     }
 
-    public AudioSource PlayRandom(AudioClip[] clips, Vector3 position, float volume = 1f)
-    {
-        if (clips != null)
-        {
-            if (clips.Length != 0)
-            {
-                int randomIndex = Random.Range(0, clips.Length);
-
-                if (clips[randomIndex] != null)
-                {
-                    AudioSource source = PlayClipAtPoint(clips[randomIndex], position, volume);
-                    return source;
-                }
-            }
-        }
-        return null;
-    }
     public void PlayRandomMusic()
     {
-        PlayRandom(musicClips, Vector3.zero, musicVolume);
+        PlayRandomSound(musicSource);
     }
+
 
     public void PlayWinSound()
     {
-        PlayRandom(winClips, Vector3.zero, fxVolume);
+        PlayRandomSound(winSound);
     }
 
     public void PlayLoseSound()
     {
-        PlayRandom(loseClips, Vector3.zero, fxVolume);
+        PlayRandomSound(loseSound);
     }
 
     public void PlayBonusSound()
     {
-        PlayRandom(bonusClips, Vector3.zero, fxVolume);
+        PlayRandomSound(bonusSound);
     }
+
+    public void PlayClearPieceSound()
+    {
+        clearPieceSound.Play();
+    }
+    public void PlayStarSound()
+    {
+        starSound.Play();
+    }
+
 }

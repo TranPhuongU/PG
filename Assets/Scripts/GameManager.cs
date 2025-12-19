@@ -4,6 +4,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
 using UnityEngine.SceneManagement;
+public enum GameState
+{
+    Menu,
+    Game,
+    Win,
+    Lose,
+    Intro
+}
 
 public class GameManager : MonoBehaviour
 {
@@ -16,13 +24,9 @@ public class GameManager : MonoBehaviour
     public int currentScore;
     public int[] scoreGoals;
 
-    public enum GameState
-    {
-        Menu,
-        Game,
-        Win,
-        Lose,
-    }
+    public bool m_isReadyToBegin = false;
+
+   
 
     GameState gameState;
 
@@ -41,6 +45,7 @@ public class GameManager : MonoBehaviour
             Destroy(gameObject);
         }
         instance = this;
+        Application.targetFrameRate = 90;
 
         Board.onPieceCleared += HandleScoreEvent;
     }
@@ -56,9 +61,20 @@ public class GameManager : MonoBehaviour
         currentScore = 0;
         LoadLevel(SelectedLevel.levelID);
 
-       // UIManager.instance.scoreMeter.SetupStars(this);
+        SetGameState(GameState.Intro);
+
+        StartCoroutine(ShowIntroRoutine());
+
+        // UIManager.instance.scoreMeter.SetupStars(this);
         UIManager.instance.scoreMeter.SetupVStars(this);
 
+    }
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.D))
+        {
+            ProgressManager.DeleteSave();
+        }
     }
 
     public void SetGameState(GameState _gameState)
@@ -117,7 +133,13 @@ public class GameManager : MonoBehaviour
 
     void HandleScoreEvent(int pieceScore, Piece piece)
     {
+        // ⛔ Game đã kết thúc → bỏ qua toàn bộ scoring
+        if (gameState != GameState.Game)
+            return;
+
         SetScore(pieceScore);
+
+        SoundManager.instance.PlayClearPieceSound();
         UpdateScoreStars(currentScore);
         UIManager.instance.UpdateScore(currentScore);
 
@@ -152,6 +174,10 @@ public class GameManager : MonoBehaviour
 
     public void SaveProgress()
     {
+        PlayerPrefs.SetInt("OnePiece",onePieceBoosterAmount);
+        PlayerPrefs.SetInt("ColorPiece",colorPieceBoosterAmount);
+        PlayerPrefs.SetInt("ReplacePiece",replacePieceBoosterAmount);
+
         // Tách số từ "LevelX"
         int levelID = SelectedLevel.levelID;
 
@@ -184,6 +210,50 @@ public class GameManager : MonoBehaviour
             Board board = gameObjectBoard.GetComponent<Board>();
 
             board.InitBoard(data.width, data.height); // ✔ KHỞI TẠO ĐÚNG THỜI ĐIỂM
+            board.isResolving = true;
+
+        }
+
+        onePieceBoosterAmount = PlayerPrefs.GetInt("OnePiece");
+        colorPieceBoosterAmount = PlayerPrefs.GetInt("ColorPiece");
+        replacePieceBoosterAmount = PlayerPrefs.GetInt("ReplacePiece");
+    }
+
+    IEnumerator ShowIntroRoutine()
+    {
+        // 2) Message MoveOn
+        UIManager.instance.messageWindow.GetComponent<RectXformMover>().MoveOn();
+        UIManager.instance.messageWindow.ShowScoreMessage(scoreGoals[scoreGoals.Length - 1]);
+
+        // 3) Chờ player nhấn Start
+
+        UIManager.instance.messageWindow.onStartPressed = () => m_isReadyToBegin = true;
+
+        while (!m_isReadyToBegin)
+            yield return null;
+
+        // 4) Bắt đầu fade OFF
+        UIManager.instance.screenFader.FadeOff();
+        UIManager.instance.messageWindow.GetComponent<RectXformMover>().MoveOff();
+
+        yield return new WaitForSeconds(0.4f);
+
+        // 5) Bắt đầu game
+        SetGameState(GameState.Game);
+
+        StartGameplay();
+    }
+    void StartGameplay()
+    {
+        Board board = FindFirstObjectByType<Board>();
+
+        if (board != null)
+        {
+            // Spawn mở màn: piece từ trên rơi xuống
+            StartCoroutine(PieceSpawner.instance.IntroRiseAnimation());
+
         }
     }
+
+
 }

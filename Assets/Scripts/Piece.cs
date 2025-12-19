@@ -113,23 +113,14 @@ public class Piece : MonoBehaviour
     IEnumerator MoveRoutine(int targetRootX, int targetRootY, float timeToMove)
     {
         Vector3 startPos = transform.position;
-        int len = cells.Count;
-        float offset = (len % 2 == 0) ? -0.5f : 0f;
-
-        Vector3 endPos = new Vector3(
-            targetRootX + offset,
-            targetRootY,
-            0
-        );
-
+        Vector3 endPos = GetWorldPos(targetRootX, targetRootY);
 
         float elapsed = 0f;
-        float t;
 
         while (elapsed < timeToMove)
         {
             elapsed += Time.deltaTime;
-            t = Mathf.Clamp01(elapsed / timeToMove);
+            float t = Mathf.Clamp01(elapsed / timeToMove);
 
             switch (interpolation)
             {
@@ -155,8 +146,21 @@ public class Piece : MonoBehaviour
         moveCoroutine = null;
     }
 
+
     public void ActiveFrame(bool state)
     {
         framePrefab.SetActive(state);
     }
+
+    public Vector3 GetWorldPos(int rootX, int rootY)
+    {
+        int len = cells.Count;
+
+        // CHUẨN: offset theo pivot
+        float offset = (len % 2 == 0) ? -0.5f : 0f;
+
+        return new Vector3(rootX + offset, rootY, 0);
+    }
+
+
 }

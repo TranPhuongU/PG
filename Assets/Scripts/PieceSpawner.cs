@@ -7,6 +7,7 @@ public class PieceSpawner : MonoBehaviour
 
     public static PieceSpawner instance;
 
+    [HideInInspector]
     public Board board;
     public GameObject[] piecePrefabs;
     public GameObject[] onePiecePrefabsByColor;     // index theo PieceColor enum
@@ -18,6 +19,8 @@ public class PieceSpawner : MonoBehaviour
 
     // 👉 Thêm: list các preview đang spawn để dễ clear
     private List<PreviewRow> activePreviews = new List<PreviewRow>();
+    private List<Piece> initialPieces = new List<Piece>();
+
 
     private void Awake()
     {
@@ -39,23 +42,19 @@ public class PieceSpawner : MonoBehaviour
     {
         for (int y = 0; y < spawnHeight; y++)
         {
-            // Mỗi hàng luôn để trống ít nhất 1 ô → không bao giờ full row
             int emptyX = Random.Range(0, board.width);
 
             int x = 0;
             while (x < board.width)
             {
-                // Bỏ qua ô trống bắt buộc
                 if (x == emptyX)
                 {
                     x++;
                     continue;
                 }
 
-                // Random piece
                 Piece p = CreateRandomPiece();
 
-                // Check horizontal bounds BEFORE CanPlace
                 if (!FitsHorizontal(p, x))
                 {
                     Destroy(p.gameObject);
@@ -63,7 +62,6 @@ public class PieceSpawner : MonoBehaviour
                     continue;
                 }
 
-                // Check support — piece phải được “đỡ” từ dưới
                 if (!HasSupport(p, x, y))
                 {
                     Destroy(p.gameObject);
@@ -71,7 +69,6 @@ public class PieceSpawner : MonoBehaviour
                     continue;
                 }
 
-                // Check trùng (collision)
                 if (!board.CanPlace(p, x, y))
                 {
                     Destroy(p.gameObject);
@@ -79,14 +76,35 @@ public class PieceSpawner : MonoBehaviour
                     continue;
                 }
 
-                // Place
+                // ❌ không cho piece chiếm emptyX
+                if (OccupiesX(p, x, emptyX))
+                {
+                    Destroy(p.gameObject);
+                    x++;
+                    continue;
+                }
+
+
+                // đặt vào grid logic
                 board.PlacePieceAt(p, x, y);
 
-                // Nhảy qua chiều dài piece
+                // spawn ẩn dưới đáy đúng theo pivot
+                Vector3 finalPos = p.GetWorldPos(x, y);
+
+                float startOffset = -6f;
+                p.transform.position = new Vector3(finalPos.x, finalPos.y + startOffset, 0);
+
+                // add vào list
+                initialPieces.Add(p);
+
+
+
+
                 x += p.cells.Count;
             }
         }
     }
+
 
 
     // Hỗ trợ: chỉ cần 1 cell của piece có support
@@ -166,6 +184,14 @@ public class PieceSpawner : MonoBehaviour
                 x++;
                 continue;
             }
+            // ❌ không cho piece chiếm emptyX
+            if (OccupiesX(p, x, emptyX))
+            {
+                Destroy(p.gameObject);
+                x++;
+                continue;
+            }
+
 
             // Place piece
             board.PlacePieceAt(p, x, y);
@@ -224,6 +250,63 @@ public class PieceSpawner : MonoBehaviour
     public GameObject GetOnePiecePrefabByColor(PieceColor color)
     {
         return onePiecePrefabsByColor[(int)color];
+    }
+    // ================== INTRO RISE ANIMATION ==================
+    public IEnumerator IntroRiseAnimation()
+    {
+        float riseSpeed = 0.1f;
+        bool done = false;
+
+        while (!done)
+        {
+            done = true;
+
+            foreach (Piece p in initialPieces)
+            {
+                if (p == null) continue;
+
+                Vector3 targetPos = p.GetWorldPos(p.rootX, p.rootY);
+                Vector3 cur = p.transform.position;
+
+                if (cur.y < targetPos.y)
+                {
+                    float newY = cur.y + riseSpeed;
+                    if (newY > targetPos.y) newY = targetPos.y;
+
+                    p.transform.position = new Vector3(targetPos.x, newY, 0);
+
+                    if (newY < targetPos.y)
+                        done = false;
+                }
+            }
+
+            yield return null;
+        }
+
+        // đảm bảo final snap đúng
+        foreach (Piece p in initialPieces)
+        {
+            p.transform.position = p.GetWorldPos(p.rootX, p.rootY);
+        }
+
+        BuildPreviewFromRow0();
+
+        // 🔓 mở input sau khi intro hoàn tất
+        if (board != null)
+        {
+            board.isResolving = false;
+        }
+
+    }
+
+    bool OccupiesX(Piece p, int rootX, int targetX)
+    {
+        foreach (var c in p.cells)
+        {
+            if (rootX + c.x == targetX)
+                return true;
+        }
+        return false;
     }
 
 

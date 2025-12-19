@@ -5,6 +5,12 @@ using UnityEngine;
 
 public class Board : MonoBehaviour
 {
+    Vector2 dragStartScreenPos;
+    int lastStepX;
+    float pixelsPerCell;
+
+
+
     public GameObject tilePrefab;   // gán từ Inspector
     Tile[,] tiles;
 
@@ -39,6 +45,32 @@ public class Board : MonoBehaviour
 
         activeFrame = Instantiate(frameSquarePrefab, transform);
         activeFrame.SetActive(false);
+
+        pixelsPerCell =
+    Camera.main.WorldToScreenPoint(Vector3.right).x -
+    Camera.main.WorldToScreenPoint(Vector3.zero).x;
+
+    }
+
+    void Update()
+    {
+        if (draggingPiece == null) return;
+        if (isResolving) return;
+        if (!Input.GetMouseButton(0)) return;
+
+        float deltaX = Input.mousePosition.x - dragStartScreenPos.x;
+
+        int stepX = Mathf.FloorToInt(deltaX / pixelsPerCell);
+        int moveDelta = stepX - lastStepX;
+
+        if (moveDelta == 0) return;
+
+        int dir = moveDelta > 0 ? 1 : -1;
+
+        if (MovePieceBy(draggingPiece, dir, 0))
+        {
+            lastStepX += dir;
+        }
     }
 
     public void InitBoard(int w, int h)
@@ -108,17 +140,11 @@ public class Board : MonoBehaviour
         foreach (var c in piece.cells)
             grid[x + c.x, ry + c.y] = piece;
 
-        int len = piece.cells.Count;
-        float offset = (len % 2 == 0) ? -0.5f : 0f;
-
-        piece.transform.position = new Vector3(
-            x + offset,
-            ry,
-            0
-        );
+        piece.transform.position = piece.GetWorldPos(x, ry);
 
         return true;
     }
+
 
     public void RemovePieceFromGrid(Piece piece)
     {
@@ -358,19 +384,19 @@ public class Board : MonoBehaviour
             GameManager.instance.SaveProgress();
             if (GameManager.instance.IsGameOver())
             {
-                Debug.Log("Win");
-                GameManager.instance.SetGameState(GameManager.GameState.Win);
+                GameManager.instance.SetGameState(GameState.Win);
             }
             else
             {
-                Debug.Log("Lose");
-
-                GameManager.instance.SetGameState(GameManager.GameState.Lose);
+                GameManager.instance.SetGameState(GameState.Lose);
             }
             yield break;
         }
 
-        isResolving = false;
+        if (GameManager.instance.GetCurrentState() == GameState.Game)
+        {
+            isResolving = false;
+        }
     }
 
     IEnumerator HandleFullLineCoroutine()
@@ -403,17 +429,18 @@ public class Board : MonoBehaviour
         if (isResolving) return;
 
         draggingPiece = grid[tile.xIndex, tile.yIndex];
-        lastTileOver = tile;
+        if (draggingPiece == null) return;
 
-        if (draggingPiece != null)
-        {
-            dragStartX = draggingPiece.rootX;
-            dragStartY = draggingPiece.rootY;
+        dragStartX = draggingPiece.rootX;
+        dragStartY = draggingPiece.rootY;
 
-            ShowPieceFrame(draggingPiece);
-            draggingPiece.ActiveFrame(true);
-        }
+        dragStartScreenPos = Input.mousePosition;
+        lastStepX = 0;
+
+        ShowPieceFrame(draggingPiece);
+        draggingPiece.ActiveFrame(true);
     }
+
 
     void ShowPieceFrame(Piece p)
     {
@@ -432,11 +459,17 @@ public class Board : MonoBehaviour
         if (isResolving) return;
         if (draggingPiece == null) return;
 
+        // 🔴 FIX QUAN TRỌNG
+        if (lastTileOver == null)
+        {
+            lastTileOver = tile;
+            return;
+        }
+
         int deltaX = tile.xIndex - lastTileOver.xIndex;
 
         if (deltaX > 0)
         {
-            // kéo sang phải từng ô
             if (MovePieceBy(draggingPiece, +1, 0))
             {
                 lastTileOver = tile;
@@ -444,7 +477,6 @@ public class Board : MonoBehaviour
         }
         else if (deltaX < 0)
         {
-            // kéo sang trái từng ô
             if (MovePieceBy(draggingPiece, -1, 0))
             {
                 lastTileOver = tile;
@@ -452,32 +484,27 @@ public class Board : MonoBehaviour
         }
     }
 
+
     public void HandleReleaseTile()
     {
-        if (isResolving) { draggingPiece = null; return; }
         if (draggingPiece == null) return;
 
-        // sau khi thả → cho hệ thống rơi + clear
-        // Nếu không di chuyển thì KHÔNG tính lượt
         if (draggingPiece.rootX == dragStartX &&
             draggingPiece.rootY == dragStartY)
         {
-            // Tắt highlight frame nếu có
             activeFrame?.SetActive(false);
             draggingPiece.ActiveFrame(false);
-
             draggingPiece = null;
-            return; // KHÔNG chạy resolve
+            return;
         }
 
-        // Nếu có di chuyển → tính lượt
         StartCoroutine(ResolveAfterMove());
 
         activeFrame.SetActive(false);
         draggingPiece.ActiveFrame(false);
-
         draggingPiece = null;
     }
+
 
     public IEnumerator RaiseBoardSmooth()
     {
@@ -666,7 +693,10 @@ public class Board : MonoBehaviour
         // KHÔNG spawn top buffer row
         // KHÔNG tính lượt
 
-        isResolving = false;
+        if(GameManager.instance.GetCurrentState() == GameState.Game)
+        {
+            isResolving = false;
+        }
     }
 
     public bool IsBoardEmpty()

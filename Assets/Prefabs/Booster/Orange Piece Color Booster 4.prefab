@@ -157,7 +157,7 @@ SpriteRenderer:
   m_SortingLayerID: 1443864307
   m_SortingLayer: 1
   m_SortingOrder: 3
-  m_Sprite: {fileID: 21300000, guid: ef2fe04ca55997a47971e62d03931953, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f5f9a00aff4a38a44bdf54d1867af5ef, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -275,4 +275,5 @@ MonoBehaviour:
   rootX: 0
   rootY: 0
   framePrefab: {fileID: 240827323327805515}
+  clearSound: {fileID: 8300000, guid: 6dce900c6b57748dbb2ee112588b2bd9, type: 3}
   cells: []

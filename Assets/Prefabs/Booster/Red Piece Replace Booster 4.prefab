@@ -25,13 +25,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3420850965871593846}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.66, y: 0.66, z: 0.66}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 8084456921156392772}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -90}
 --- !u!212 &2629497512175102030
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -73,7 +73,7 @@ SpriteRenderer:
   m_SortingLayerID: 1443864307
   m_SortingLayer: 1
   m_SortingOrder: 3
-  m_Sprite: {fileID: 21300000, guid: c0ee38148e4091a43bbd7d2cf3f8bc75, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 7d46f2c7dbfadee4ba418a659560085c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -180,7 +180,7 @@ GameObject:
   - component: {fileID: 8472773242242148962}
   - component: {fileID: 8655140256126425028}
   m_Layer: 0
-  m_Name: Blue Piece Replace Booster 4
+  m_Name: Red Piece Replace Booster 4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -245,7 +245,7 @@ SpriteRenderer:
   m_SortingLayer: 1
   m_SortingOrder: 2
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 0.08652687, g: 1, b: 0, a: 1}
+  m_Color: {r: 1, g: 0, b: 0, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
@@ -270,9 +270,10 @@ MonoBehaviour:
   score: 6
   interpolation: 4
   type: 4
-  color: 1
+  color: 0
   booster: 2
   rootX: 0
   rootY: 0
   framePrefab: {fileID: 6981082751240436610}
+  clearSound: {fileID: 8300000, guid: 6dce900c6b57748dbb2ee112588b2bd9, type: 3}
   cells: []

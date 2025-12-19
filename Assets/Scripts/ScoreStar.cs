@@ -5,11 +5,10 @@ using UnityEngine.UI;
 
 public class ScoreStar : MonoBehaviour
 {
-    public Image star;
-    public ParticlePlayer starFX;
-    public float delay = 0.5f;
-    public AudioClip starSound;
-    public bool activated = false;
+    [SerializeField] Image star;
+    [SerializeField] ParticlePlayer starFX;
+    [SerializeField] float delay = 0.5f;
+    [SerializeField] bool activated = false;
 
 
     private void Start()
@@ -41,9 +40,9 @@ public class ScoreStar : MonoBehaviour
             starFX.Play();
         }
 
-        if (SoundManager.instance != null && starSound != null)
+        if (SoundManager.instance != null)
         {
-            SoundManager.instance.PlayClipAtPoint(starSound, Vector3.zero, SoundManager.instance.fxVolume);
+            SoundManager.instance.PlayStarSound();
         }
 
         yield return new WaitForSeconds(delay);

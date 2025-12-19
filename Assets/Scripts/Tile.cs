@@ -23,14 +23,6 @@ public class Tile : MonoBehaviour
         }
     }
 
-    void OnMouseEnter()
-    {
-        if (m_board != null && Input.GetMouseButton(0))
-        {
-            m_board.HandleDragTile(this);
-        }
-    }
-
     void OnMouseUp()
     {
         if (m_board != null)
