@@ -26,7 +26,7 @@ public class GameManager : MonoBehaviour
 
     public bool m_isReadyToBegin = false;
 
-   
+    public int coin;
 
     GameState gameState;
 
@@ -93,6 +93,7 @@ public class GameManager : MonoBehaviour
 
         if(currentScore >= maxScored)
         {
+            coin += 100;
             return true;
         }
 
@@ -177,6 +178,7 @@ public class GameManager : MonoBehaviour
         PlayerPrefs.SetInt("OnePiece",onePieceBoosterAmount);
         PlayerPrefs.SetInt("ColorPiece",colorPieceBoosterAmount);
         PlayerPrefs.SetInt("ReplacePiece",replacePieceBoosterAmount);
+        PlayerPrefs.SetInt("Coin", coin);
 
         // Tách số từ "LevelX"
         int levelID = SelectedLevel.levelID;

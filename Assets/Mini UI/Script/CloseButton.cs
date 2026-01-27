@@ -13,6 +13,6 @@ public class CloseButton : MonoBehaviour
     public void Close()
     {
         Panel.SetActive(false);
-        this.gameObject.SetActive(false);
+        //this.gameObject.SetActive(false);
     }
 }

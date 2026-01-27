@@ -47,8 +47,8 @@ public class Board : MonoBehaviour
         activeFrame.SetActive(false);
 
         pixelsPerCell =
-    Camera.main.WorldToScreenPoint(Vector3.right).x -
-    Camera.main.WorldToScreenPoint(Vector3.zero).x;
+        Camera.main.WorldToScreenPoint(Vector3.right).x -
+        Camera.main.WorldToScreenPoint(Vector3.zero).x;
 
     }
 

@@ -13,8 +13,6 @@ public class UIBooster : MonoBehaviour
 
     [SerializeField] private int price;
 
-    [SerializeField] private int money;
-
     private void Start()
     {
         // Text mô tả
@@ -32,14 +30,16 @@ public class UIBooster : MonoBehaviour
     }
     public void BuyButton()
     {
-        if(money >= price)
+        if(LevelMenuManager.instance.coin >= price)
         {
             int amount = PlayerPrefs.GetInt(boosterType.ToString(), 0);
             amount++;
             amountBooster.text = amount.ToString();
             PlayerPrefs.SetInt(boosterType.ToString(), amount);
-            money -= price;
+            LevelMenuManager.instance.coin -= price;
+            LevelMenuManager.instance.UpdateCoin();
 
+            PlayerPrefs.SetInt("Coin", LevelMenuManager.instance.coin);
         }
     }
 }
